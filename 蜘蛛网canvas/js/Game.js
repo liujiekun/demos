@@ -8,7 +8,6 @@ class Game {
     this.spiritRadius = 10
     this.collisionDistance = 120
     this.collisionMap = {}
-    this.mouse = {}
     this.init(id)
   }
   init (id) {
@@ -28,11 +27,21 @@ class Game {
     requestAnimationFrame(this.move.bind(this))
     canvas.onmousemove = function (e) {
       const mouseposition = { x: e.offsetX, y: e.offsetY }
-      _this.mouse.position = mouseposition
-      _this.spirits['mouse'] = { position: mouseposition }
+      const mouseSpirit = new Spirit(width, height, this.spiritRadius)
+      mouseSpirit.position = mouseposition
+      mouseSpirit.mouse = true
+      const oldIndex = _this.spirits.findIndex(spirit => spirit.mouse)
+      if (oldIndex > -1) {
+        _this.spirits[oldIndex] = mouseSpirit
+      } else {
+        _this.spirits.push(mouseSpirit)
+      }
     }
     canvas.onmouseleave = function () {
-      this.mouse = {}
+      const oldIndex = _this.spirits.findIndex(spirit => spirit.mouse)
+      if (oldIndex > -1) {
+        _this.spirits.splice(oldIndex, 1)
+      }
     }
   }
   draw () {
@@ -41,12 +50,6 @@ class Game {
       const spirit = this.spirits[i]
       this.context.beginPath()
       this.context.arc(spirit.position.x, spirit.position.y, 10, 0, Math.PI * 2, false)
-      this.context.stroke()
-      this.context.closePath()
-    }
-    if (this.mouse.position) {
-      this.context.beginPath()
-      this.context.arc(this.mouse.position.x, this.mouse.position.y, 10, 0, Math.PI * 2, false)
       this.context.stroke()
       this.context.closePath()
     }
@@ -73,22 +76,18 @@ class Game {
     const len = this.spirits.length
     for (let i = 0; i < len; i++) {
       const sourceSpirit = this.spirits[i]
-      if (this.mouse.position) {
-        const mouseDis = Util.calcDistance(sourceSpirit.position, this.mouse.position)
-        if (mouseDis <= this.collisionDistance) {
-          sourceSpirit.position.x -= 0.03 * (sourceSpirit.position.x - this.mouse.position.x)
-          sourceSpirit.position.y -= 0.03 * (sourceSpirit.position.y - this.mouse.position.y)
-          if (!this.collisionMap['mouse']) {
-            this.collisionMap['mouse'] = {}
-          }
-          this.collisionMap['mouse'][i] = { dis: mouseDis }
-        }
-      }
       for (let j = 0; j < len; j++) {
         if (j == i) continue;
         const targetSpirit = this.spirits[j]
         const distance = Util.calcDistance(sourceSpirit.position, targetSpirit.position)
         if (distance <= this.collisionDistance) {
+          if (sourceSpirit.mouse) {
+            targetSpirit.position.x += 0.03 * (sourceSpirit.position.x - targetSpirit.position.x)
+            targetSpirit.position.y += 0.03 * (sourceSpirit.position.y - targetSpirit.position.y)
+          } else if (targetSpirit.mouse) {
+            sourceSpirit.position.x -= 0.03 * (sourceSpirit.position.x - targetSpirit.position.x)
+            sourceSpirit.position.y -= 0.03 * (sourceSpirit.position.y - targetSpirit.position.y)
+          }
           if (this.collisionMap[i] && (!this.collisionMap[j] || !this.collisionMap[j][i])) {
             this.collisionMap[i][j] = { dis: distance }
           } else {
