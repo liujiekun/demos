@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <style>
+    .modal{
+      position: absolute;
+      margin: 10px 0;
+      width: 300px;
+      height: 100px;
+      border: 1px solid #ccc;
+      background: lightblue;
+      box-shadow: 5px 5px 5px 3px lightblue;
+    }
+    .topleft{
+      top:0;
+      left:0;
+    }
+    .topright{
+      top:0;
+      right:0;
+    }
+    .bottomleft{
+      bottom:0;
+      left:0;
+    }
+    .bottomright{
+      bottom:0;
+      right:0;
+    }
+  </style>
+  <button onclick="addModal()">添加模态框</button>
+  <script src="js/index.js"></script>
+  <script>
+    function addModal(){
+      toastr.addModal({
+        position:'bottomright',
+        title: 'test',
+        content: '我乐意'
+      })
+    }
+  </script>
+</body>
+</html>
