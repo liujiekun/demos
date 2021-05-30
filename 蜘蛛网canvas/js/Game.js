@@ -27,13 +27,15 @@ class Game {
     requestAnimationFrame(this.move.bind(this))
     canvas.onmousemove = function (e) {
       const mouseposition = { x: e.offsetX, y: e.offsetY }
-      const mouseSpirit = new Spirit(width, height, this.spiritRadius)
-      mouseSpirit.position = mouseposition
-      mouseSpirit.mouse = true
       const oldIndex = _this.spirits.findIndex(spirit => spirit.mouse)
       if (oldIndex > -1) {
-        _this.spirits[oldIndex] = mouseSpirit
+        _this.spirits[oldIndex]['position'] = mouseposition
       } else {
+        const mouseSpirit = new Spirit(width, height, this.spiritRadius)
+        mouseSpirit.position = mouseposition
+        mouseSpirit.mouse = true
+        mouseSpirit.vX = 0
+        mouseSpirit.vY = 0
         _this.spirits.push(mouseSpirit)
       }
     }
