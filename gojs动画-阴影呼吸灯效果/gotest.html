@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+    <script src="js/go-debug.js"></script>
+    <script src="js/Figures.js"></script>
+    <script src="js/shapeFigure.js"></script>
+    <script src="js/Animate.js"></script>
+    <style>
+      #app {
+        height: 500px;
+        width: 1000px;
+        border: 1px solid #000;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+    </div>
+    <div>
+
+      <button onclick="breathLight('general')">基本</button>
+      <button onclick="breathLight('warning')">警告</button>
+      <button onclick="breathLight('serious')">严重</button>
+      <button onclick="breathLight('emergency')">紧急</button>
+      <button onclick="stopAnimation()">停止动画</button>
+      <button onclick="clearMark()">清空标记</button>
+    </div>
+    <script>
+    function init() {
+      if (window.goSamples) goSamples();  // init for these samples -- you don't need to call this
+      var $ = go.GraphObject.make;
+
+      myDiagram =
+        $(go.Diagram, "app",  // create a Diagram for the DIV HTML element
+          {
+            "undoManager.isEnabled": true,
+            allowResize: true
+          });
+
+      const myNodeTemplate = 
+        $(go.Node,'Auto',
+        new go.Binding('isShadowed'),
+        new go.Binding('shadowColor'),
+        new go.Binding('shadowOffset'),
+        new go.Binding('shadowBlur'),
+
+        $(go.Shape,{
+          name: 'SHAPE',
+          stroke: 'red',
+          fill: 'lightblue',
+          width:160,
+          height:120,
+        },
+        new go.Binding('figure'),
+        new go.Binding('shadowVisible')
+        )
+      )
+      myDiagram.nodeTemplateMap.add('myNode',myNodeTemplate)
+      const model = $(go.GraphLinksModel,{
+        nodeDataArray:[{
+          category:'myNode',
+          figure:'Rectangle'
+        },
+        {
+          category:'myNode',
+          figure:'Circle'
+        },
+        {
+          category:'myNode',
+          figure:'myCloud'
+        }],
+        linkDataArray:[]
+      })
+      myDiagram.model = model
+    }
+    init()
+    function breathLight(state) {
+      // 给一个标识，然后setState，然后动画直接执行
+      Animation.setState(go,myDiagram,[-1,-2,-3], state)
+    }
+    function stopAnimation(){
+      Animation.clearAnimation()
+    }
+    function clearMark(){
+      Animation.clearMarks()
+    }
+    </script>
+  </body>
+</html>
