@@ -1,13 +1,15 @@
-const Animation = {
-  animation:null,
-  animateObjects: new Set(),
-  diagram: null,
-  status:{
-    general:'blue',
-    warning:'yellow',
-    serious:'orange',
-    emergency:'red'
-  },
+class Animation {
+  constructor() {
+    this.animation = null
+    this.animateObjects = new Set()
+    this.diagram = null
+  }
+  static statusMap = {
+    general: 'blue',
+    warning: 'yellow',
+    serious: 'orange',
+    emergency: 'red'
+  }
   clearMarks(){
     this.diagram.startTransaction('clearShadow')
     this.animateObjects.forEach(node=>{
@@ -18,14 +20,15 @@ const Animation = {
     })
     this.diagram.commitTransaction('clearShadow')
     this.animation = null
-  },
+  }
   clearAnimation(){
-    this.animation.stop()
-  },
-  setState: function (go,diagram,keys,state){
+    this.animation && this.animation.stop()
+  }
+  setState (go, diagram, keys, state) {
     const _this = this
     _this.animateObjects = new Set()
     _this.diagram = diagram
+    const statusMap = Animation.statusMap
     go.AnimationManager.defineAnimationEffect('myShadowBlur', function (obj, startValue, endValue, easing, currentTime, duration, animation) {
       var hueValue = easing(currentTime, startValue, endValue - startValue, duration);
       obj.shadowBlur = hueValue;
@@ -36,7 +39,7 @@ const Animation = {
         const part = diagram.findNodeForKey(key)
         // const safeSet = diagram.model.setDataProperty
         if (part) {
-          diagram.model.setDataProperty(part.data, 'shadowColor', _this.status[state])
+          diagram.model.setDataProperty(part.data, 'shadowColor', statusMap[state])
           _this.animateObjects.add(part)
         }
       })
@@ -55,7 +58,7 @@ const Animation = {
         if(part){
           diagram.model.setDataProperty(part.data,'isShadowed', true)
           diagram.model.setDataProperty(part.data,'shadowOffset', new go.Point(0, 0))
-          diagram.model.setDataProperty(part.data, 'shadowColor', _this.status[state])
+          diagram.model.setDataProperty(part.data, 'shadowColor', statusMap[state])
           diagram.model.setDataProperty(part.data,'shadowBlur',16)
           diagram.model.setDataProperty(part.data,'shadowVisible' , true)
           animation.add(part, "myShadowBlur", 16, 6)

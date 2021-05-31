@@ -71,6 +71,18 @@
         },
         {
           category:'myNode',
+          figure:'Circle'
+        },
+        {
+          category:'myNode',
+          figure:'Circle'
+        },
+        {
+          category:'myNode',
+          figure:'Circle'
+        },
+        {
+          category:'myNode',
           figure:'myCloud'
         }],
         linkDataArray:[]
@@ -78,15 +90,20 @@
       myDiagram.model = model
     }
     init()
+    const animation = new Animation()
+    const animation2 = new Animation()
     function breathLight(state) {
       // 给一个标识，然后setState，然后动画直接执行
-      Animation.setState(go,myDiagram,[-1,-2,-3], state)
+      animation.setState(go,myDiagram,[-1,-2,-3], state)
+      animation2.setState(go,myDiagram,[-4,-5,-6], 'emergency')
     }
     function stopAnimation(){
-      Animation.clearAnimation()
+      animation.clearAnimation()
+      animation2.clearAnimation()
     }
     function clearMark(){
-      Animation.clearMarks()
+      animation.clearMarks()
+      animation2.clearMarks()
     }
     </script>
   </body>
