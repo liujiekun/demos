@@ -54,20 +54,20 @@ class Animation {
       diagram.startTransaction('setShadow')
       keys.forEach(key => {
         const part = diagram.findNodeForKey(key)
-        // const safeSet = diagram.model.setDataProperty
+        const safeSet = diagram.model.setDataProperty.bind(diagram.model)
         if(part){
-          diagram.model.setDataProperty(part.data,'isShadowed', true)
-          diagram.model.setDataProperty(part.data,'shadowOffset', new go.Point(0, 0))
-          diagram.model.setDataProperty(part.data, 'shadowColor', statusMap[state])
-          diagram.model.setDataProperty(part.data,'shadowBlur',16)
-          diagram.model.setDataProperty(part.data,'shadowVisible' , true)
+          safeSet(part.data, 'isShadowed', true)
+          safeSet(part.data, 'shadowOffset', new go.Point(0, 0))
+          safeSet(part.data, 'shadowColor', statusMap[state])
+          safeSet(part.data, 'shadowBlur', 16)
+          safeSet(part.data, 'shadowVisible', true)
           animation.add(part, "myShadowBlur", 16, 6)
           _this.animateObjects.add(part)
         }
       })
       diagram.commitTransaction('setShadow')
       _this.animation = animation
-      animation.start();
     }
+    _this.animation.start();
   }
 }
