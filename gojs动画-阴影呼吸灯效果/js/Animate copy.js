@@ -1,8 +1,10 @@
 class Animation {
-  constructor() {
+  constructor(diagram, nodes, animationOpts) {
     this.animation = null
-    this.animateObjects = new Set()
-    this.diagram = null
+    this.animateObjects = new Set(nodes)
+    this.diagram = diagram
+    this.animationOpts = animationOpts
+    this.init()
   }
   static statusMap = {
     general: 'blue',
@@ -11,64 +13,66 @@ class Animation {
     emergency: 'red'
   }
   clearMarks(){
+    this.stopAnimation()
     this.diagram.startTransaction('clearShadow')
     this.animateObjects.forEach(node=>{
       if (node) {
         this.diagram.model.setDataProperty(node.data, 'isShadowed', false)
-        this.diagram.model.setDataProperty(node.data, 'shadowVisible', false)
       }
     })
     this.diagram.commitTransaction('clearShadow')
-    this.animation = null
   }
-  clearAnimation(){
+  stopAnimation () {
     this.animation && this.animation.stop()
   }
-  setState (go, diagram, keys, state, duration, animationType, runCount) {
+  init () {
     const _this = this
-    _this.animateObjects = new Set()
-    _this.diagram = diagram
     const statusMap = Animation.statusMap
+    const diagram = _this.diagram
     go.AnimationManager.defineAnimationEffect('myShadowBlur', function (obj, startValue, endValue, easing, currentTime, duration, animation) {
       var hueValue = easing(currentTime, startValue, endValue - startValue, duration);
       obj.shadowBlur = hueValue;
     });
-    if(_this.animation){
-      diagram.startTransaction('setShadow')
-      keys.forEach(key => {
-        const part = diagram.findNodeForKey(key)
-        // const safeSet = diagram.model.setDataProperty
-        if (part) {
-          diagram.model.setDataProperty(part.data, 'shadowColor', statusMap[state])
-          _this.animateObjects.add(part)
-        }
+    const animation = new go.Animation();
+    const { duration, animationType, animationTarget, runCount } = _this.animationOpts
+    animation.duration = duration ? +duration : 600;
+    animation.reversible = true
+    animation.easing = animationType ? go.Animation[animationType] : go.Animation.EaseInOutQuad;
+    // Run indefinitely
+    animation.runCount = runCount ? +runCount : Infinity;
+    const oldSkip = diagram.skipsUndoManager
+    diagram.skipsUndoManager = true
+    diagram.startTransaction('setShadow')
+    const safeSet = diagram.model.setDataProperty.bind(diagram.model)
+    _this.animateObjects.forEach(part => {
+      if (part) {
+        safeSet(part.data, 'isShadowed', false)
+        safeSet(part.data, 'shadowOffset', new go.Point(0, 0))
+        console.log('animationTarget', animationTarget)
+        safeSet(part.data, 'shadowColor', statusMap[animationTarget || 'general'])
+        safeSet(part.data, 'shadowBlur', 16)
+        safeSet(part.data, 'shadowVisible', true)
+        animation.add(part, "myShadowBlur", 16, 6)
+      }
+    })
+    diagram.commitTransaction('setShadow')
+    diagram.skipsUndoManager = oldSkip
+    _this.animation = animation
+  }
+  start () {
+    const _this = this
+    const statusMap = Animation.statusMap
+    if (_this.animation) {
+      const oldSkip = _this.diagram.skipsUndoManager
+      _this.diagram.skipsUndoManager = true
+      _this.diagram.startTransaction('setShadow')
+      const safeSet = _this.diagram.model.setDataProperty.bind(_this.diagram.model)
+      _this.animateObjects.forEach(part => {
+        safeSet(part.data, 'isShadowed', true)
       })
-      diagram.commitTransaction('setShadow')
-    } else {
-      const animation = new go.Animation();
-      animation.duration = duration ? +duration : 600;
-      animation.reversible = true
-      animation.easing = animationType ? go.Animation[animationType] : go.Animation.EaseInOutQuad;
-      // Run indefinitely
-      animation.runCount = runCount || Infinity;
-      diagram.startTransaction('setShadow')
-      keys.forEach(key => {
-        const part = diagram.findNodeForKey(key)
-        const safeSet = diagram.model.setDataProperty.bind(diagram.model)
-        if(part){
-          safeSet(part.data, 'isShadowed', true)
-          safeSet(part.data, 'shadowOffset', new go.Point(0, 0))
-          safeSet(part.data, 'shadowColor', statusMap[state])
-          safeSet(part.data, 'shadowBlur', 16)
-          safeSet(part.data, 'shadowVisible', true)
-          animation.add(part, "myShadowBlur", 16, 6)
-          _this.animateObjects.add(part)
-        }
-      })
-      diagram.commitTransaction('setShadow')
-      _this.animation = animation
+      _this.diagram.commitTransaction('setShadow')
+      _this.diagram.skipsUndoManager = oldSkip
+      _this.animation.start();
     }
-    return _this.animation
-    // _this.animation.start();
   }
 }

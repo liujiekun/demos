@@ -36,12 +36,13 @@
       </div>
       <div class="right">
         <div class="buttons">
-          <button class="button" onclick="breathLight('general')">基本</button>
+          <!-- <button class="button" onclick="breathLight('general')">基本</button>
           <button class="button" onclick="breathLight('warning')">警告</button>
           <button class="button" onclick="breathLight('serious')">严重</button>
           <button class="button" onclick="breathLight('emergency')">紧急</button>
           <button class="button" onclick="stopAnimation()">停止动画</button>
-          <button class="button" onclick="clearMark()">清空标记</button>
+          -->
+          <button class="button" onclick="clearMark()">清空标记</button> 
           <div>
             <button class="button" onclick="setProp()">设置state属性</button>
             <input id="setProp" type="text" />
@@ -157,21 +158,6 @@
       myDiagram.model = model
     }
     init()
-    const animation = new Animation()
-    const animation2 = new Animation()
-    function breathLight(state) {
-      // 给一个标识，然后setState，然后动画直接执行
-      animation.setState(go,myDiagram,[-1,-2,-3], state)
-      animation2.setState(go,myDiagram,[-4,-5,-6], 'emergency')
-    }
-    function stopAnimation(){
-      animation.clearAnimation()
-      animation2.clearAnimation()
-    }
-    function clearMark(){
-      animation.clearMarks()
-      animation2.clearMarks()
-    }
     function setProp(){
       const node = myDiagram.selection.first()
       const propEle = document.getElementById('setProp')
@@ -190,10 +176,10 @@
           myDiagram.startTransaction('setData')
           let [duration,animationType,runCount,animationProp,animationTarget] = formData
           console.log('duration,animationType,runCount,animationProp,animationTarget', duration,animationType,runCount,animationProp,animationTarget)
-          const newAnimation = new Animation().setState(go,myDiagram,[lastNode.data.key],animationTarget,duration,animationType,runCount)
+          const newAnimation = new Animation(myDiagram, [lastNode], {animationTarget,duration,animationType,runCount})
 
           animationProp = 'state'
-          animationTarget = animationTarget || 'error'
+          animationTarget = animationTarget || 'general'
           const setData = myDiagram.model.setDataProperty.bind(myDiagram.model)
           setData(lastNode.data,'animation',newAnimation)
           setData(lastNode.data,'animationType',animationType)
@@ -202,7 +188,7 @@
           myDiagram.commitTransaction('setData')
         }
         const {animation,animationType, animationProp, animationTarget} = part.data
-        let {duration,runCount} = animation || {}
+        let {duration,runCount} = animation&&animation.animation || {}
         setForm({duration,animationType,runCount,animationProp,animationTarget})
         lastNode = part
       }
@@ -224,23 +210,24 @@
       })
     }
     myDiagram.model.addChangedListener(evt=>{
-      console.log('evt', evt)
       const part = evt.object
       if(part && part.animationProp){
-        console.log('evt.propertyName,part.data.animationProp', evt.propertyName,part.animationProp)
         if(evt.propertyName === part.animationProp){
-          // const animation = part.data.animation
-          // animation.start()
           if(part[part.animationProp] == part.animationTarget){
             const animation = part.animation
             animation&&animation.start()
           } else {
             const animation = part.animation
-            animation&&animation.stop()
+            animation&&animation.clearMarks()
           }
         }
       }
     })
+    function clearMark(){
+      myDiagram.nodes.each(node=>{
+        node.animation && node.animation.clearMark()
+      })
+    }
     </script>
   </body>
 </html>
