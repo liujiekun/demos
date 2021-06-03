@@ -92,6 +92,11 @@
                 </select>
               </td>
             </tr>
+            <tr>
+              <td>
+                <button onclick="saveAnimationInfo()">确定</button>
+              </td>
+            </tr>
           </table>
         </div>
       </div>
@@ -156,6 +161,10 @@
         linkDataArray:[]
       })
       myDiagram.model = model
+      go.AnimationManager.defineAnimationEffect('myShadowBlur', function (obj, startValue, endValue, easing, currentTime, duration, animation) {
+      var hueValue = easing(currentTime, startValue, endValue - startValue, duration);
+      obj.shadowBlur = hueValue;
+    });
     }
     init()
     function setProp(){
@@ -169,26 +178,8 @@
     myDiagram.addDiagramListener('ChangedSelection', e => {
       if(e.subject.size===1){
         const part = e.subject.first()
-        if(!lastNode){
-          lastNode = part
-        } else {
-          const formData = getDataFromForm()
-          myDiagram.startTransaction('setData')
-          let [duration,animationType,runCount,animationProp,animationTarget] = formData
-          console.log('duration,animationType,runCount,animationProp,animationTarget', duration,animationType,runCount,animationProp,animationTarget)
-          const newAnimation = new Animation(myDiagram, [lastNode], {animationTarget,duration,animationType,runCount})
-
-          animationProp = 'state'
-          animationTarget = animationTarget || 'general'
-          const setData = myDiagram.model.setDataProperty.bind(myDiagram.model)
-          setData(lastNode.data,'animation',newAnimation)
-          setData(lastNode.data,'animationType',animationType)
-          setData(lastNode.data,'animationProp',animationProp)
-          setData(lastNode.data,'animationTarget',animationTarget)
-          myDiagram.commitTransaction('setData')
-        }
         const {animation,animationType, animationProp, animationTarget} = part.data
-        let {duration,runCount} = animation&&animation.animation || {}
+        let {duration,runCount} = animation&&animation.animationOpts || {}
         setForm({duration,animationType,runCount,animationProp,animationTarget})
         lastNode = part
       }
@@ -225,8 +216,33 @@
     })
     function clearMark(){
       myDiagram.nodes.each(node=>{
-        node.animation && node.animation.clearMark()
+        node.data.animation && node.data.animation.clearMarks()
       })
+    }
+    function saveAnimationInfo(){
+        const selection = myDiagram.selection
+        if(selection.size != 1) return
+        const node = selection.first()
+        const formData = getDataFromForm()
+        myDiagram.startTransaction('setData')
+        let [duration,animationType,runCount,animationProp,animationTarget] = formData
+        console.log('duration,animationType,runCount,animationProp,animationTarget', duration,animationType,runCount,animationProp,animationTarget)
+        let animation = node.data.animation
+        if(animation){
+          console.log('update')
+          animation.updateAnimationOpts({animationTarget,duration,animationType,runCount})
+        } else {
+          animation = new Animation(myDiagram, [node], {animationTarget,duration,animationType,runCount})
+        }
+
+        animationProp = 'state'
+        animationTarget = animationTarget || 'general'
+        const setData = myDiagram.model.setDataProperty.bind(myDiagram.model)
+        setData(node.data,'animation',animation)
+        setData(node.data,'animationType',animationType)
+        setData(node.data,'animationProp',animationProp)
+        setData(node.data,'animationTarget',animationTarget)
+        myDiagram.commitTransaction('setData')
     }
     </script>
   </body>
