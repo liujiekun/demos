@@ -9,27 +9,97 @@
     <script src="js/Figures.js"></script>
     <script src="js/shapeFigure.js"></script>
     <script src="js/Animate.js"></script>
+    <script src="js/util.js"></script>
     <style>
+      .container{
+        display: flex;
+      }
       #app {
         height: 500px;
         width: 1000px;
         border: 1px solid #000;
       }
+      .right{
+        display: flex;
+      }
+      .buttons{
+        display: flex;
+        flex-direction: column;
+      }
+      .button{
+        margin: 5px 0;
+      }
     </style>
   </head>
   <body>
-    <div id="app">
-    </div>
-    <div>
+    <div class="container">
+      <div id="app">
+      </div>
+      <div class="right">
+        <div class="buttons">
+          <button class="button" onclick="clearMark()">清空标记</button> 
+          <button class="button" onclick="forceAnimate()">强制驱动</button> 
+          <div>
+            <button class="button" onclick="setProp()">设置state属性</button>
+            <input id="setProp" type="text" />
+          </div>
 
-      <button onclick="breathLight('general')">基本</button>
-      <button onclick="breathLight('warning')">警告</button>
-      <button onclick="breathLight('serious')">严重</button>
-      <button onclick="breathLight('emergency')">紧急</button>
-      <button onclick="stopAnimation()">停止动画</button>
-      <button onclick="clearMark()">清空标记</button>
+        </div>
+        <div class="dataBinding">
+          <table>
+            <tr>
+              <td>动画时长</td>
+              <td>
+                <input id="duration" type="text" placeholder="请输入动画时长"/>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                动画类型
+              </td>
+              <td>
+                <select id="animationType" name="animationType">
+                  <option>EaseInExpo</option>
+                  <option selected>EaseInOutQuad</option>
+                  <option>EaseInQuad</option>
+                  <option>EaseLinear</option>
+                  <option>EaseOutExpo</option>
+                  <option>EaseOutQuad</option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td>动画循环次数</td>
+              <td>
+                <input id="runCount" type="text" placeholder="无限次请输入Infinity"/>
+              </td>
+            </tr>
+            <tr>
+              <td>动画触发条件</td>
+              <td>
+                <input id="animationProp" disabled="true" value="state" type="text" placeholder="输入动画触发属性"/>
+              </td>
+              <td>
+                <select id="animationTarget" name="animationTarget">
+                  <option>general</option>
+                  <option selected>warning</option>
+                  <option>serious</option>
+                  <option>emergency</option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <button onclick="saveAnimationInfo()">确定</button>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
     </div>
     <script>
+    var lastNode = null
+    var globalAnimation = null
     function init() {
       if (window.goSamples) goSamples();  // init for these samples -- you don't need to call this
       var $ = go.GraphObject.make;
@@ -88,22 +158,86 @@
         linkDataArray:[]
       })
       myDiagram.model = model
+      go.AnimationManager.defineAnimationEffect('myShadowBlur', function (obj, startValue, endValue, easing, currentTime, duration, animation) {
+      var hueValue = easing(currentTime, startValue, endValue - startValue, duration);
+      obj.shadowBlur = hueValue;
+    });
     }
     init()
-    const animation = new Animation()
-    const animation2 = new Animation()
-    function breathLight(state) {
-      // 给一个标识，然后setState，然后动画直接执行
-      animation.setState(go,myDiagram,[-1,-2,-3], state)
-      animation2.setState(go,myDiagram,[-4,-5,-6], 'emergency')
+    function setProp(){
+      const node = myDiagram.selection.first()
+      const propEle = document.getElementById('setProp')
+      const propVal = propEle.value
+      myDiagram.startTransaction('setData');
+      myDiagram.model.setDataProperty(node.data,'state',propVal);
+      myDiagram.commitTransaction('setData')
     }
-    function stopAnimation(){
-      animation.clearAnimation()
-      animation2.clearAnimation()
-    }
+    myDiagram.addDiagramListener('ChangedSelection', e => {
+      if(e.subject.size===1){
+        const part = e.subject.first()
+        const {animation,animationType, animationProp, animationTarget} = part.data
+        let {duration,runCount} = animation&&animation.animationOpts || {}
+        Util.setForm({duration,animationType,runCount,animationProp,animationTarget})
+        lastNode = part
+      }
+    })
+    
+    myDiagram.model.addChangedListener(evt=>{
+      const part = evt.object
+      if(part && part.animationProp){
+        if(evt.propertyName === part.animationProp){
+          if(part[part.animationProp] == part.animationTarget){
+            const animation = part.animation
+            animation&&animation.start()
+          } else {
+            const animation = part.animation
+            animation&&animation.clearMarks()
+          }
+        }
+      }
+    })
     function clearMark(){
-      animation.clearMarks()
-      animation2.clearMarks()
+      myDiagram.nodes.each(node=>{
+        node.data.animation && node.data.animation.clearMarks()
+      })
+      globalAnimation && globalAnimation.clearMarks()
+    }
+    function forceAnimate(){
+      const totalNodesNum = myDiagram.nodes.count
+      const randomKeys = Util.createRandom(totalNodesNum/2,totalNodesNum,1)
+      const selectedNodes = randomKeys.map(key=>{
+        return myDiagram.findNodeForKey(-key)
+      })
+      if(globalAnimation){
+        globalAnimation.clearMarks()
+      }
+      const totalStatus = Object.keys(Animation.statusMap)
+      const randomState = totalStatus[Util.createRandom(1,totalStatus.length,0)[0]]
+      globalAnimation = new Animation(myDiagram, selectedNodes, {duration: 600,animationTarget:randomState,runCount: 10})
+      globalAnimation.start()
+    }
+    function saveAnimationInfo(){
+        const selection = myDiagram.selection
+        if(selection.size != 1) return
+        const node = selection.first()
+        const formData = Util.getDataFromForm()
+        myDiagram.startTransaction('setData')
+        let [duration,animationType,runCount,animationProp,animationTarget] = formData
+        let animation = node.data.animation
+        if(animation){
+          animation.updateAnimationOpts({animationTarget,duration,animationType,runCount})
+        } else {
+          animation = new Animation(myDiagram, [node], {animationTarget,duration,animationType,runCount})
+        }
+
+        animationProp = 'state'
+        animationTarget = animationTarget || 'general'
+        const setData = myDiagram.model.setDataProperty.bind(myDiagram.model)
+        setData(node.data,'animation',animation)
+        setData(node.data,'animationType',animationType)
+        setData(node.data,'animationProp',animationProp)
+        setData(node.data,'animationTarget',animationTarget)
+        myDiagram.commitTransaction('setData')
     }
     </script>
   </body>

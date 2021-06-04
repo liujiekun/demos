@@ -1,8 +1,9 @@
 class Animation {
-  constructor() {
+  constructor(diagram, nodes, animationOpts) {
     this.animation = null
-    this.animateObjects = new Set()
-    this.diagram = null
+    this.animateObjects = new Set(nodes)
+    this.diagram = diagram
+    this.animationOpts = animationOpts
   }
   static statusMap = {
     general: 'blue',
@@ -11,6 +12,7 @@ class Animation {
     emergency: 'red'
   }
   clearMarks(){
+    this.stopAnimation()
     this.diagram.startTransaction('clearShadow')
     this.animateObjects.forEach(node=>{
       if (node) {
@@ -19,55 +21,45 @@ class Animation {
       }
     })
     this.diagram.commitTransaction('clearShadow')
-    this.animation = null
   }
-  clearAnimation(){
+  stopAnimation () {
     this.animation && this.animation.stop()
   }
-  setState (go, diagram, keys, state) {
-    const _this = this
-    _this.animateObjects = new Set()
-    _this.diagram = diagram
-    const statusMap = Animation.statusMap
-    go.AnimationManager.defineAnimationEffect('myShadowBlur', function (obj, startValue, endValue, easing, currentTime, duration, animation) {
-      var hueValue = easing(currentTime, startValue, endValue - startValue, duration);
-      obj.shadowBlur = hueValue;
-    });
-    if(_this.animation){
-      diagram.startTransaction('setShadow')
-      keys.forEach(key => {
-        const part = diagram.findNodeForKey(key)
-        // const safeSet = diagram.model.setDataProperty
-        if (part) {
-          diagram.model.setDataProperty(part.data, 'shadowColor', statusMap[state])
-          _this.animateObjects.add(part)
-        }
-      })
-      diagram.commitTransaction('setShadow')
-    } else {
-      const animation = new go.Animation();
-      animation.duration = 600;
-      animation.reversible = true
-      animation.easing = go.Animation.EaseLinear;
-      // Run indefinitely
-      animation.runCount = Infinity;
-      diagram.startTransaction('setShadow')
-      keys.forEach(key => {
-        const part = diagram.findNodeForKey(key)
-        const safeSet = diagram.model.setDataProperty.bind(diagram.model)
-        if(part){
-          safeSet(part.data, 'isShadowed', true)
-          safeSet(part.data, 'shadowOffset', new go.Point(0, 0))
-          safeSet(part.data, 'shadowColor', statusMap[state])
-          safeSet(part.data, 'shadowBlur', 16)
-          safeSet(part.data, 'shadowVisible', true)
-          animation.add(part, "myShadowBlur", 16, 6)
-          _this.animateObjects.add(part)
-        }
-      })
-      diagram.commitTransaction('setShadow')
-      _this.animation = animation
+  start () {
+    if (!this.animation) {
+      this.animation = new go.Animation();
     }
-    _this.animation.start();
+    this.updateAnimation(this.animation, this.animationOpts)
+    this.animation.start()
+  }
+  updateAnimation (animation, opts) {
+    const diagram = this.diagram
+    const statusMap = Animation.statusMap
+    const { duration, animationType, animationTarget, runCount } = opts
+    console.log('animationType', animationType)
+    animation.duration = duration ? +duration : 600;
+    animation.reversible = true
+    animation.easing = animationType ? go.Animation[animationType] : go.Animation.EaseInOutQuad;
+    // Run indefinitely
+    animation.runCount = runCount ? +runCount : Infinity;
+    const oldSkip = diagram.skipsUndoManager
+    diagram.skipsUndoManager = true
+    diagram.startTransaction('setShadow')
+    const safeSet = diagram.model.setDataProperty.bind(diagram.model)
+    this.animateObjects.forEach(part => {
+      if (part) {
+        safeSet(part.data, 'isShadowed', true)
+        safeSet(part.data, 'shadowOffset', new go.Point(0, 0))
+        safeSet(part.data, 'shadowColor', statusMap[animationTarget || 'general'])
+        safeSet(part.data, 'shadowBlur', 16)
+        safeSet(part.data, 'shadowVisible', true)
+        animation.add(part, "myShadowBlur", 16, 6)
+      }
+    })
+    diagram.commitTransaction('setShadow')
+    diagram.skipsUndoManager = oldSkip
+  }
+  updateAnimationOpts ({ animationTarget, duration, animationType, runCount }) {
+    this.animationOpts = Object.assign(this.animationOpts, { animationTarget, duration, animationType, runCount })
   }
 }
