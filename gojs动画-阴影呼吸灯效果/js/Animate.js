@@ -29,6 +29,7 @@ class Animation {
     if (!this.animation) {
       this.animation = new go.Animation();
     }
+    this.animation.finished = this.clearMarks.bind(this)
     this.updateAnimation(this.animation, this.animationOpts)
     this.animation.start()
   }

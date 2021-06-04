@@ -20,7 +20,7 @@ const Util = {
     max = max || 1
     min = min || 0
     while (result.size < num) {
-      const random = Math.floor(Math.random() * (max - min) + min)
+      const random = Math.round(Math.random() * (max - min) + min)
       result.add(random)
     }
     return [...result]
