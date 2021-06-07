@@ -39,6 +39,7 @@
         <div class="buttons">
           <button class="button" onclick="clearMark()">清空标记</button> 
           <button class="button" onclick="forceAnimate()">强制驱动</button> 
+          <button class="button" onclick="sequenceAnimate()">连续触发</button> 
           <div>
             <button class="button" onclick="setProp()">设置state属性</button>
             <input id="setProp" type="text" />
@@ -137,6 +138,10 @@
         },
         {
           category:'myNode',
+          figure:'Heart'
+        },
+        {
+          category:'myNode',
           figure:'Circle'
         },
         {
@@ -215,6 +220,36 @@
       const randomState = totalStatus[Util.createRandom(1,totalStatus.length,0)[0]]
       globalAnimation = new Animation(myDiagram, selectedNodes, {duration: 600,animationTarget:randomState,runCount: 10})
       globalAnimation.start()
+    }
+
+    let flag = true
+    function createNewAnimation(key){
+      if(key>myDiagram.nodes.count){
+        flag = !flag
+        key--
+        key--
+      } else if(key<1){
+        flag = !flag
+        key++
+        key++
+      }
+      const animation = new go.Animation()
+      animation.duration = 600
+      animation.runCount = 2
+      animation.reversible = true
+      animation.easing = go.Animation.EaseInQuad
+      const node = myDiagram.findNodeForKey(-(flag?(key++):(key--)))
+      const bounds = node.actualBounds
+      animation.add(node,'height',bounds.height,bounds.height - 100,true)
+      animation.finished = function(){
+        createNewAnimation(key).start()
+      }
+      return animation
+    }
+
+    function sequenceAnimate(){
+      const animation = createNewAnimation(1)
+      animation.start()
     }
     function saveAnimationInfo(){
         const selection = myDiagram.selection
